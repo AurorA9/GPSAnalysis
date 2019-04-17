@@ -53,6 +53,7 @@ class Personal_analysis:
         df = df.fillna('null')
         df['start_address_name'] = df['start_address_name'].apply(self.preprocess_address)
         df['end_address_name'] = df['end_address_name'].apply(self.preprocess_address)
+        #print(df['end_address_name'][0])
         df[~df['start_address_name'].isnull()]
         logger.info("地址格式化完成.... ")
         # 新建一列用来保存 日期 格式：年 - 月 - 日
@@ -81,15 +82,14 @@ class Personal_analysis:
         n_ = len(nameList)
         i_ = 1
         for name in nameList:
-
-
             if name == 'null':
                 continue
             else:
                 logger.info("将个人信息存到excel中...进度 %.2f" % (i_ / n_))
                 i_ += 1
                 result = df[df['user_id'] == name]
-                result.to_excel(personalDataPath + name + '.xls', index=False)
+                #print(result)
+                result.to_excel(personalDataPath + name + '.xls', index=False, encoding='utf-8')
         logger.info("保存完成，共%d个数据" % i_)
 
     # 起始地址排序 终止地址排序
@@ -552,7 +552,7 @@ class Personal_analysis:
         everyday_tmp = []  # 存已记录的数据
 
         everyday_tmp.append(str(df['datetime'].iloc[0]).split(' ')[0])   #初始化为第一天的记录
-        everyday_stay_long_address = {}  # 保存地址 以及出现次数
+        everyday_stay_long_address = {}  # 保存地址 以及出现次数 以及总停留时间 格式 {address : [counts,saty_values]}
         maxStayTime = -10000
         everyday_long_address = ''  # 保存每天停车时长最长的地址
         #   从第二条开始遍历所有数据
@@ -587,20 +587,21 @@ class Personal_analysis:
                             everyday_long_address = df['end_address_name'].iloc[i-1]
             else:     # 新的一天 则记录上次保存的结果
                 #print("newDay")
-                maxStayTime = -10000
+
                 everyday_tmp.append(str(df['datetime'].iloc[i]).split(' ')[0])   #如果是每天第一次记录，则不计算，只保存
                 # 保存结果
                 #print('地址%s' % everyday_long_address)
                 if everyday_long_address == '':
                     continue
                 cnt += 1
-                if everyday_long_address in everyday_stay_long_address.keys():
-                    everyday_stay_long_address[everyday_long_address] += 1
-                else:
-                    everyday_stay_long_address[everyday_long_address] = 1
+                t__ = everyday_stay_long_address.get(everyday_long_address,[0,0])
+                # [t__[0]+1,t__[1]+maxStayTime] 分别为计次数+1  最大时间累积和
+                everyday_stay_long_address[everyday_long_address] = [t__[0]+1,t__[1]+maxStayTime]
+                print("地址：%s --新增停留时间%d" %(everyday_long_address,maxStayTime))
                 everyday_long_address = ''
+                maxStayTime = -10000
 
-        everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1],reverse=True)
+        everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1][0],reverse=True)
         print(everyday_stay_long_address)
 
         # 判断取出数据的个数
@@ -610,8 +611,9 @@ class Personal_analysis:
         # 只记录前num个
         everyday_stay_long_address = everyday_stay_long_address[:num]
 
-        everyday_stay_long_address_ = []
-        everyday_stay_long_times = []
+        everyday_stay_long_address_ = []  # 记录停车时长最长的地址列表
+        everyday_stay_long_times = [] # 记录停车时长最长的地址列表中每个地址的次数
+        everyday_stay_long_mean_stay_time = [] # 记录停车时长最长的地址列表中每个地址平均停止次数
         # 用于单独罗列出地址
         temp_ = {}
         for i in everyday_stay_long_address:
@@ -621,6 +623,14 @@ class Personal_analysis:
                 temp_[i[0]] = i[1]
                 everyday_stay_long_address_.append(i[0])
 
+        everyday_stay_long_gps_data_dic = {}  # 保存地址：GPS对应
+        everyday_stay_long_gps_data = []  # 记录前几个的GPS
+        for itemAddress in everyday_stay_long_address_:
+            df_ = df[df['end_address_name'] == itemAddress]
+            loc_gps = df_['end_gps_poi'].iloc[0]
+            #print("地址%s:GPS:%s" % (itemAddress, loc_gps))
+            everyday_stay_long_gps_data_dic[itemAddress] = loc_gps
+
         # 对地址数据进行处理
         if precess:
             everyday_stay_long_address_ = self.sub_address(everyday_stay_long_address_)
@@ -629,11 +639,13 @@ class Personal_analysis:
         for i in everyday_stay_long_address_:
             for j in temp_.keys():
                 if i in j:
-                    everyday_stay_long_times.append(temp_[j])
+                    everyday_stay_long_times.append(temp_[j][0])
+                    everyday_stay_long_gps_data.append(everyday_stay_long_gps_data_dic[j])
+                    everyday_stay_long_mean_stay_time.append(temp_[j][1]/temp_[j][0])
                     break
         # everyday_stay_long_address_ 罗列地址 如：['sss','aaa','sss','fff']
         # everyday_stay_long_times 罗列地址对应次数 如：[4,2,1,1]
-        return everyday_stay_long_address_, everyday_stay_long_times, cnt
+        return everyday_stay_long_address_, everyday_stay_long_times, cnt,everyday_stay_long_mean_stay_time, everyday_stay_long_gps_data
 
     def count_everyday_stay_long_address_17_9(self, df, num=None,starttime=None,endtime=None,which_day=0,precess=False):
         '''
@@ -661,16 +673,16 @@ class Personal_analysis:
         elif which_day == 2:
             df = df[df['weekday'].isin([6,7])]
 
-        everyday_tmp = []  # 存已记录的数据
+        #everyday_tmp = []  # 存已记录的数据
 
-        everyday_tmp.append(str(df['datetime'].iloc[0]).split(' ')[0])   #初始化为第一天的记录
+        #everyday_tmp.append(str(df['datetime'].iloc[0]).split(' ')[0])   #初始化为第一天的记录
         everyday_stay_long_address = {}  # 保存地址 以及出现次数
         maxStayTime = -10000
         everyday_long_address = ''  # 保存每天停车时长最长的地址
 
         # 第一条记录开始  计算当前的终止时间与下一条的开始时间
         for i in range(0, df.shape[0]-1):
-            sum_rec  +=  1
+            sum_rec +=  1
             #print("当前开始地址:%s -- 结束地址%s---时间范围%s --%s" %(df['start_address_name'].iloc[i],df['end_address_name'].iloc[i],df['start_time'].iloc[i],df['end_time'].iloc[i]))
             if df['end_address_name'].iloc[i] != df['start_address_name'].iloc[i+1]:
                 # print("起始地址与终止地址不同")
@@ -712,10 +724,15 @@ class Personal_analysis:
                     if everyday_long_address != '' and maxStayTime >60:
                         #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                         cnt += 1
-                        if everyday_long_address in everyday_stay_long_address.keys():
-                            everyday_stay_long_address[everyday_long_address] += 1
-                        else:
-                            everyday_stay_long_address[everyday_long_address] = 1
+
+                        if maxStayTime < 0:
+                            logger.error("计算17-9点间最大值出错---------------------------------")
+                            return
+                        t__ = everyday_stay_long_address.get(everyday_long_address, [0, 0])
+                        # [t__[0]+1,t__[1]+maxStayTime] 分别为计次数+1  最大时间累积和
+                        everyday_stay_long_address[everyday_long_address] = [t__[0] + 1, t__[1] + maxStayTime]
+                        #print("地址：%s --新增停留时间%d" % (everyday_long_address, maxStayTime))
+
                         everyday_long_address = ''
                         maxStayTime = -1000
                     else:
@@ -734,10 +751,14 @@ class Personal_analysis:
                     if everyday_long_address != '' and maxStayTime >60:
                         #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                         cnt += 1
-                        if everyday_long_address in everyday_stay_long_address.keys():
-                            everyday_stay_long_address[everyday_long_address] += 1
-                        else:
-                            everyday_stay_long_address[everyday_long_address] = 1
+                        if maxStayTime < 0:
+                            logger.error("计算17-9点间最大值出错---------------------------------")
+                            return
+                        t__ = everyday_stay_long_address.get(everyday_long_address, [0, 0])
+                        # [t__[0]+1,t__[1]+maxStayTime] 分别为计次数+1  最大时间累积和
+                        everyday_stay_long_address[everyday_long_address] = [t__[0] + 1, t__[1] + maxStayTime]
+                        #print("地址：%s --新增停留时间%d" % (everyday_long_address, maxStayTime))
+
                         everyday_long_address = ''
                         maxStayTime = -1000
                     else:
@@ -747,17 +768,21 @@ class Personal_analysis:
                 if everyday_long_address != '' and maxStayTime > 60:
                     #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                     cnt += 1
-                    if everyday_long_address in everyday_stay_long_address.keys():
-                        everyday_stay_long_address[everyday_long_address] += 1
-                    else:
-                        everyday_stay_long_address[everyday_long_address] = 1
+                    if maxStayTime < 0:
+                        logger.error("计算17-9点间最大值出错---------------------------------")
+                        return
+                    t__ = everyday_stay_long_address.get(everyday_long_address, [0, 0])
+                    # [t__[0]+1,t__[1]+maxStayTime] 分别为计次数+1  最大时间累积和
+                    everyday_stay_long_address[everyday_long_address] = [t__[0] + 1, t__[1] + maxStayTime]
+                    # print("地址：%s --新增停留时间%d" % (everyday_long_address, maxStayTime))
+
                     everyday_long_address = ''
                     maxStayTime = -1000
                 else:
                     everyday_long_address = ''
                     maxStayTime = -1000
                 continue
-        everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1],reverse=True)
+        everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1][0],reverse=True)
 
         # 判断取出数据的个数
         if num == None or num > len(everyday_stay_long_address):
@@ -766,8 +791,10 @@ class Personal_analysis:
         # 只记录前num个
         everyday_stay_long_address = everyday_stay_long_address[:num]
 
-        everyday_stay_long_address_ = []
-        everyday_stay_long_times = []
+        everyday_stay_long_address_ = []  # 记录停车时长最长的地址列表
+        everyday_stay_long_times = []  # 记录停车时长最长的地址列表中每个地址的次数
+        everyday_stay_long_mean_stay_time = []  # 记录停车时长最长的地址列表中每个地址平均停止次数
+
         # 用于单独罗列出地址
         temp_ = {}
         for i in everyday_stay_long_address:
@@ -777,6 +804,14 @@ class Personal_analysis:
                 temp_[i[0]] = i[1]
                 everyday_stay_long_address_.append(i[0])
 
+        everyday_stay_long_gps_data_dic = {}  #保存地址：GPS对应
+        everyday_stay_long_gps_data = []  # 记录前几个的GPS
+        for itemAddress in everyday_stay_long_address_:
+            df_ = df[df['end_address_name'] == itemAddress]
+            loc_gps = df_['end_gps_poi'].iloc[0]
+            print("地址%s:GPS:%s" %(itemAddress, loc_gps))
+            everyday_stay_long_gps_data_dic[itemAddress] = loc_gps
+
         # 对地址数据进行处理
         if precess:
             everyday_stay_long_address_ = self.sub_address(everyday_stay_long_address_)
@@ -785,11 +820,13 @@ class Personal_analysis:
         for i in everyday_stay_long_address_:
             for j in temp_.keys():
                 if i in j:
-                    everyday_stay_long_times.append(temp_[j])
+                    everyday_stay_long_times.append(temp_[j][0])
+                    everyday_stay_long_gps_data.append(everyday_stay_long_gps_data_dic[j])
+                    everyday_stay_long_mean_stay_time.append(temp_[j][1]/temp_[j][0])
                     break
-        # everyday_stay_long_address_ 罗列地址 如：['sss','aaa','sss','fff']
+        # everyday_stay_long_address_ 罗列地址 如：['sss','aaa','sss1','fff']
         # everyday_stay_long_times 罗列地址对应次数 如：[4,2,1,1]
-        return everyday_stay_long_address_, everyday_stay_long_times, cnt
+        return everyday_stay_long_address_, everyday_stay_long_times, cnt,everyday_stay_long_mean_stay_time,everyday_stay_long_gps_data
 
 
     def cal_weekday_count_figure(self, df,num =None,starttime=None,endtime=None,which_day=0):
@@ -1259,7 +1296,10 @@ class Personal_analysis:
         columns = ['user_id', 'car_id',
                    'car_driving_time','car_driving_day',
                    'car_driving_time_everyday','start_datetime',
-                   'end_datetime','workdaySum',
+                   'end_datetime','day_between_start_end',
+                   'usage_rate_day','workdaySum_dring','weekendSum_dring',
+                   'usage_rate_workday','usage_rate_weekend',
+                   'workdaySum',
                    'weekendSum','rate',
                    'province', 'city',
                    'region','county',
@@ -1275,8 +1315,11 @@ class Personal_analysis:
                    'everyday_stay_long_times_', 'everyday_stay_long_sum_',
                    'everyday_stay_long_address_6_21', 'everyday_stay_long_address_6_21_process',
                    'everyday_stay_long_times_6_21_', 'everyday_stay_long_sum_6_21_',
+                   'everyday_stay_long_mean_stay_time_6_21_',
                    'everyday_stay_long_address_17_9', 'everyday_stay_long_address_17_9_process',
                    'everyday_stay_long_times_17_9_', 'everyday_stay_long_sum_17_9_',
+                   'everyday_stay_long_mean_stay_time_17_9_',
+                    'everyday_stay_long_sum_17_9_gps', 'everyday_stay_long_sum_17_9_gps_',
                    'first_address', 'home_address_guesss', 'work_address_guesss',
                     'weekendGo', 'weekendGo_process',
                     'workdayGo','workdayGo_process',
@@ -1301,15 +1344,109 @@ class Personal_analysis:
             car_id = df['car_id'].iloc[0]
             car_driving_time = df.shape[0]
             car_driving_day = len(set(df['datetime']))
+
+
+            if car_driving_day < 30:
+                print("行使天数少于30天")
+                car_driving_time_everyday=None
+                start_datetime=None; end_datetime=None; day_between_start_end=None
+                usage_rate_day=None;workdaySum_dring=None; weekendSum_dring=None
+                usage_rate_workday=None; usage_rate_weekend=None
+                workdaySum=None;
+                weekendSum=None; rate=None; province=None; city=None; region=None;
+                county=None; town=None; start_to_end_list=None;
+                driving_time_often=None; startaddress=None
+                startaddress_process=None;
+                count_start_address_=None;
+                sum_start_address_=None;
+                everyday_end_address=None; everyday_end_address_process=None;
+                count_everyday_end_address_=None; sum_everyday_end_address_=None;
+                everyday_first_stop_address=None; everyday_first_stop_address_process=None;
+                everyday_first_stop_times_=None; everyday_first_stop_times_sum_=None;
+                everyday_stay_long_address=None; everyday_stay_long_address_process=None
+                everyday_stay_long_times_=None; everyday_stay_long_sum_=None
+                everyday_stay_long_address_6_21=None; everyday_stay_long_address_6_21_process=None
+                everyday_stay_long_times_6_21_=None; everyday_stay_long_sum_6_21_=None
+                everyday_stay_long_mean_stay_time_6_21_ = None
+                everyday_stay_long_address_17_9=None; everyday_stay_long_address_17_9_process=None
+                everyday_stay_long_times_17_9_=None; everyday_stay_long_sum_17_9_=None
+                everyday_stay_long_mean_stay_time_17_9_ = None
+                everyday_stay_long_sum_17_9_gps=None;everyday_stay_long_sum_17_9_gps_=None
+                first_address=None; home_address_guesss=None
+                work_address_guesss=None
+                weekendGo=None; weekendGo_process=None
+                workdayGo=None; workdayGo_process=None
+                having_kindergarten=None; having_primary_school=None
+                having_middle_school=None; is_office_worker=None
+                consumer_address=None
+                each_hour_driving_time=None
+                save_msg.loc[row_index] = [user_id, car_id, car_driving_time,
+                                           car_driving_day, car_driving_time_everyday,
+                                           start_datetime, end_datetime, day_between_start_end,
+                                           usage_rate_day, workdaySum_dring, weekendSum_dring,
+                                           usage_rate_workday, usage_rate_weekend,
+                                           workdaySum,
+                                           weekendSum, rate, province, city, region,
+                                           county, town, start_to_end_list,
+                                           driving_time_often, startaddress,
+                                           startaddress_process,
+                                           count_start_address_,
+                                           sum_start_address_,
+                                           everyday_end_address, everyday_end_address_process,
+                                           count_everyday_end_address_, sum_everyday_end_address_,
+                                           everyday_first_stop_address, everyday_first_stop_address_process,
+                                           everyday_first_stop_times_, everyday_first_stop_times_sum_,
+                                           everyday_stay_long_address, everyday_stay_long_address_process,
+                                           everyday_stay_long_times_, everyday_stay_long_sum_,
+                                           everyday_stay_long_address_6_21, everyday_stay_long_address_6_21_process,
+                                           everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,
+                                           everyday_stay_long_mean_stay_time_6_21_,
+                                           everyday_stay_long_address_17_9, everyday_stay_long_address_17_9_process,
+                                           everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,
+                                           everyday_stay_long_mean_stay_time_17_9_,
+                                           everyday_stay_long_sum_17_9_gps,everyday_stay_long_sum_17_9_gps_,
+                                           first_address, home_address_guesss,
+                                           work_address_guesss,
+                                           weekendGo, weekendGo_process,
+                                           workdayGo, workdayGo_process,
+                                           having_kindergarten, having_primary_school,
+                                           having_middle_school, is_office_worker,
+                                           consumer_address,
+                                           each_hour_driving_time,
+                                           ]
+                row_index += 1
+                logger.info("写入个人数据：%s....进度%0.2f" % (user_id, row_index / nu_))
+                continue
+
             car_driving_time_everyday =round(car_driving_time/car_driving_day, 2)
             start_datetime = df['datetime'][0]
             end_datetime = df['datetime'][df.shape[0]-1]
 
+            start_datetime_ = pd.to_datetime(df['datetime'][0])
+            end_datetime_ = pd.to_datetime(df['datetime'][df.shape[0] - 1])
+            day_between_start_end = getattr(end_datetime_-start_datetime_,'days')+1
+            usage_rate_day = round(car_driving_day/day_between_start_end, 2)
+
+            # 在开始时间与终止期间的工作日天数
+            workdaySum_dring = int(day_between_start_end / 7 * 5)+1
+            weekendSum_dring = int(day_between_start_end / 7 * 2)+1
+
+            # 统计周中和周末使用天数
             workdaySum, weekendSum = self.getWorkdayNum(df)
+
+            # 周中和周末使用率
+            # usage_rate_workday = round(workdaySum/workdaySum_dring, 2)
+            # usage_rate_weekend = round(weekendSum / weekendSum_dring, 2)
+
             if workdaySum != 0 and weekendSum != 0:
                 rate = round(workdaySum/weekendSum, 2)
+                usage_rate_workday = round(workdaySum / workdaySum_dring, 2)
+                usage_rate_weekend = round(weekendSum / weekendSum_dring, 2)
             else :
+                usage_rate_workday = 0
+                usage_rate_weekend = 0
                 rate = 0
+
             start_address, end_address = self.cal_satrt_end_address(df)
             province, city, region, county, town = self.getProvince(start_address)
 
@@ -1320,31 +1457,39 @@ class Personal_analysis:
             # print(address_ofen)
             # address_ofen = ','.join('%s' %address for address in address_ofen)
 
+            # 每天起始地址计算
             startaddress, count_start_address, sum_start_address = self.count_everyday_first_address(df, num =4, which_day=1, precess=False)
-
             startaddress_process, count_start_address_, sum_start_address_ = self.count_everyday_first_address(df, num=4, which_day=1,precess=True)
-
+            # 计算每个的概率
+            count_start_address_ = [round(i / sum_start_address_, 2) for i in count_start_address_]
 
             everyday_end_address,count_everyday_end_address, sum_everyday_end_address = self.count_everyday_last_address(df, num=4, which_day=1)
             everyday_end_address_process, count_everyday_end_address_, sum_everyday_end_address_ = self.count_everyday_last_address(df, num=4, which_day=1, precess=True)
+            count_start_address_ = [round(i / sum_everyday_end_address_, 2) for i in count_everyday_end_address_]
 
             everyday_first_stop_address, everyday_first_stop_times, everyday_first_stop_times_sum =self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=False)
             everyday_first_stop_address_process, everyday_first_stop_times_, everyday_first_stop_times_sum_ = self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=True)
+            everyday_first_stop_times_ = [round(i / everyday_first_stop_times_sum_, 2) for i in everyday_first_stop_times_]
+
 
             everyday_stay_long_address, everyday_stay_long_times, everyday_stay_long_sum = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=False)
             everyday_stay_long_address_process, everyday_stay_long_times_, everyday_stay_long_sum_ = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=True)
+            everyday_stay_long_times_ = [round(i / everyday_stay_long_sum_, 2) for i in everyday_stay_long_times_]
 
-            everyday_stay_long_address_6_21, everyday_stay_long_times_6_21, everyday_stay_long_sum_6_21 = self.count_everyday_stay_long_address_6_21(
+            everyday_stay_long_address_6_21, everyday_stay_long_times_6_21, everyday_stay_long_sum_6_21,everyday_stay_long_mean_stay_time_6_21,everyday_stay_long_sum_6_21_gps = self.count_everyday_stay_long_address_6_21(
                 df, num=4, which_day=1, precess=False)
-            everyday_stay_long_address_6_21_process, everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_ = self.count_everyday_stay_long_address_6_21(
+            everyday_stay_long_address_6_21_process, everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,everyday_stay_long_mean_stay_time_6_21_, everyday_stay_long_sum_6_21_gps_ = self.count_everyday_stay_long_address_6_21(
                 df, num=4, which_day=1, precess=True)
+            everyday_stay_long_times_6_21_ = [round(i / everyday_stay_long_sum_6_21_, 2) for i in everyday_stay_long_times_6_21_]
 
-            everyday_stay_long_address_17_9, everyday_stay_long_times_17_9, everyday_stay_long_sum_17_9 = self.count_everyday_stay_long_address_17_9(
+            everyday_stay_long_address_17_9, everyday_stay_long_times_17_9, everyday_stay_long_sum_17_9,everyday_stay_long_mean_stay_time_17_9,everyday_stay_long_sum_17_9_gps = self.count_everyday_stay_long_address_17_9(
                 df, num=4, which_day=1, precess=False)
-            everyday_stay_long_address_17_9_process, everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_ = self.count_everyday_stay_long_address_17_9(
+            everyday_stay_long_address_17_9_process, everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,everyday_stay_long_mean_stay_time_17_9_, everyday_stay_long_sum_17_9_gps_ = self.count_everyday_stay_long_address_17_9(
                 df, num=4, which_day=1, precess=True)
-
-
+            everyday_stay_long_times_17_9_ = [round(i / everyday_stay_long_sum_17_9_, 2) for i in
+                                              everyday_stay_long_times_17_9_]
+            print("GPS1：%s" %everyday_stay_long_sum_17_9_gps)
+            print("GPS2：%s" % everyday_stay_long_sum_17_9_gps_)
             # 第一地址是否相同 相同则打印
             if len(startaddress_process) > 0 and len(everyday_end_address_process) > 0:
                 first_address = startaddress_process[0] if startaddress_process[0] == everyday_end_address_process[0] else ''
@@ -1405,11 +1550,12 @@ class Personal_analysis:
             # 判断是否是上班族
             is_office_worker = self.judge_is_worker(driving_time_often)
 
-
-
             save_msg.loc[row_index] = [user_id, car_id, car_driving_time,
                                         car_driving_day, car_driving_time_everyday,
-                                        start_datetime, end_datetime,workdaySum,
+                                        start_datetime, end_datetime,day_between_start_end,
+                                        usage_rate_day,workdaySum_dring,weekendSum_dring,
+                                        usage_rate_workday,usage_rate_weekend,
+                                        workdaySum,
                                         weekendSum, rate, province, city, region,
                                         county, town, start_to_end_list,
                                         driving_time_often, startaddress,
@@ -1424,8 +1570,11 @@ class Personal_analysis:
                                        everyday_stay_long_times_, everyday_stay_long_sum_,
                                        everyday_stay_long_address_6_21, everyday_stay_long_address_6_21_process,
                                        everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,
+                                       everyday_stay_long_mean_stay_time_6_21_,
                                        everyday_stay_long_address_17_9, everyday_stay_long_address_17_9_process,
                                        everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,
+                                       everyday_stay_long_mean_stay_time_17_9_,
+                                       everyday_stay_long_sum_17_9_gps, everyday_stay_long_sum_17_9_gps_,
                                         first_address, home_address_guesss,
                                         work_address_guesss,
                                         weekendGo, weekendGo_process,
@@ -1451,11 +1600,13 @@ class Personal_analysis:
 
 
 
-# filePath = 'GPSData-origin.xlsx'
-# filePath = 'a800_1000cars.csv'
-# personalDataPath = 'personalDataPath/'
-personalDataPath = 'test1/'
-saveFile = 'person_info_test1.xlsx'
+#filePath = 'GPSData-origin.xlsx'
+filePath = 'a800_1000cars.csv'
+#personalDataPath = 'personalDataPath/'
+#saveFile = 'person_info_all.xls'
+
+personalDataPath = 'test/'
+saveFile = 'person_info_test.xlsx'
 a = Personal_analysis()
 # 加载数据
 # df = a.load_data(filePath)
