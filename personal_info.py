@@ -597,12 +597,12 @@ class Personal_analysis:
                 t__ = everyday_stay_long_address.get(everyday_long_address,[0,0])
                 # [t__[0]+1,t__[1]+maxStayTime] 分别为计次数+1  最大时间累积和
                 everyday_stay_long_address[everyday_long_address] = [t__[0]+1,t__[1]+maxStayTime]
-                print("地址：%s --新增停留时间%d" %(everyday_long_address,maxStayTime))
+                #print("地址：%s --新增停留时间%d" %(everyday_long_address,maxStayTime))
                 everyday_long_address = ''
                 maxStayTime = -10000
 
         everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1][0],reverse=True)
-        print(everyday_stay_long_address)
+        #print(everyday_stay_long_address)
 
         # 判断取出数据的个数
         if num == None or num > len(everyday_stay_long_address):
@@ -1127,7 +1127,7 @@ class Personal_analysis:
                     break
         return address
 
-    # 获取工作地址
+    # 获取工作地址  暂时没用
     def get_work_address(self, lista, listb):
         lena = len(lista)
         lenb = len(listb)
@@ -1320,7 +1320,8 @@ class Personal_analysis:
                    'everyday_stay_long_times_17_9_', 'everyday_stay_long_sum_17_9_',
                    'everyday_stay_long_mean_stay_time_17_9_',
                     'everyday_stay_long_sum_17_9_gps', 'everyday_stay_long_sum_17_9_gps_',
-                   'first_address', 'home_address_guesss', 'work_address_guesss',
+                   'first_address', 'home_address_guesss', 'home_address_guesss_process',
+                    'work_address_guesss','work_address_guesss_process',
                     'weekendGo', 'weekendGo_process',
                     'workdayGo','workdayGo_process',
                     'having_kindergarten', 'having_primary_school',
@@ -1372,8 +1373,8 @@ class Personal_analysis:
                 everyday_stay_long_times_17_9_=None; everyday_stay_long_sum_17_9_=None
                 everyday_stay_long_mean_stay_time_17_9_ = None
                 everyday_stay_long_sum_17_9_gps=None;everyday_stay_long_sum_17_9_gps_=None
-                first_address=None; home_address_guesss=None
-                work_address_guesss=None
+                first_address=None; home_address_guesss=None; home_address_guesss_process =None
+                work_address_guesss=None; work_address_guesss_process =None
                 weekendGo=None; weekendGo_process=None
                 workdayGo=None; workdayGo_process=None
                 having_kindergarten=None; having_primary_school=None
@@ -1405,8 +1406,8 @@ class Personal_analysis:
                                            everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,
                                            everyday_stay_long_mean_stay_time_17_9_,
                                            everyday_stay_long_sum_17_9_gps,everyday_stay_long_sum_17_9_gps_,
-                                           first_address, home_address_guesss,
-                                           work_address_guesss,
+                                           first_address, home_address_guesss,home_address_guesss_process,
+                                           work_address_guesss,work_address_guesss_process,
                                            weekendGo, weekendGo_process,
                                            workdayGo, workdayGo_process,
                                            having_kindergarten, having_primary_school,
@@ -1476,35 +1477,96 @@ class Personal_analysis:
             everyday_stay_long_address_process, everyday_stay_long_times_, everyday_stay_long_sum_ = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=True)
             everyday_stay_long_times_ = [round(i / everyday_stay_long_sum_, 2) for i in everyday_stay_long_times_]
 
+
+
             everyday_stay_long_address_6_21, everyday_stay_long_times_6_21, everyday_stay_long_sum_6_21,everyday_stay_long_mean_stay_time_6_21,everyday_stay_long_sum_6_21_gps = self.count_everyday_stay_long_address_6_21(
                 df, num=4, which_day=1, precess=False)
             everyday_stay_long_address_6_21_process, everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,everyday_stay_long_mean_stay_time_6_21_, everyday_stay_long_sum_6_21_gps_ = self.count_everyday_stay_long_address_6_21(
                 df, num=4, which_day=1, precess=True)
             everyday_stay_long_times_6_21_ = [round(i / everyday_stay_long_sum_6_21_, 2) for i in everyday_stay_long_times_6_21_]
+            '''
+                       查看排在第一为的地址出现的概率是否大于第二位的地址概率的threshold,
+                        比如超出10% 则认定为第一个为工作地址，否则 为两者间平均停留时间最长的地址
+                       家庭地址同理
+            '''
+            threshold_pro = 0.1
+            if len(everyday_stay_long_times_6_21_) <= 0:
+                work_address_guesss = None
+                work_address_guesss_process = None
+            else:
+                maxP = everyday_stay_long_times_6_21_[0]
+                now_index = 0
+                i = 1
+                #遍历概率列表，选取最优的地址
+                while i < len(everyday_stay_long_times_6_21_):
+                    if abs(everyday_stay_long_times_6_21_[i] - maxP) > threshold_pro:
+                        # print("超出")
+                        break
+                    else:  # 如果概率差值不大于threshold,则选择两个中间停车时长最长的地点
+                        if everyday_stay_long_mean_stay_time_6_21_[now_index] < everyday_stay_long_mean_stay_time_6_21_[i]:
+                            now_index = i
+                        i += 1
+                # print("目前最大的地址在：%d个" %(now_index+1))
+                work_address_guesss_process = everyday_stay_long_address_6_21_process[now_index]
 
+                for i in range(len(everyday_stay_long_address_6_21)):
+                    if work_address_guesss_process in everyday_stay_long_address_6_21[i]:
+                        work_address_guesss = everyday_stay_long_address_6_21[i]
+                        break
+
+            # 计算17点到第二天早上9点间的停车时长最长的地址 ，根据此地址列表计算家庭地址
             everyday_stay_long_address_17_9, everyday_stay_long_times_17_9, everyday_stay_long_sum_17_9,everyday_stay_long_mean_stay_time_17_9,everyday_stay_long_sum_17_9_gps = self.count_everyday_stay_long_address_17_9(
                 df, num=4, which_day=1, precess=False)
             everyday_stay_long_address_17_9_process, everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,everyday_stay_long_mean_stay_time_17_9_, everyday_stay_long_sum_17_9_gps_ = self.count_everyday_stay_long_address_17_9(
                 df, num=4, which_day=1, precess=True)
             everyday_stay_long_times_17_9_ = [round(i / everyday_stay_long_sum_17_9_, 2) for i in
                                               everyday_stay_long_times_17_9_]
-            print("GPS1：%s" %everyday_stay_long_sum_17_9_gps)
-            print("GPS2：%s" % everyday_stay_long_sum_17_9_gps_)
-            # 第一地址是否相同 相同则打印
-            if len(startaddress_process) > 0 and len(everyday_end_address_process) > 0:
-                first_address = startaddress_process[0] if startaddress_process[0] == everyday_end_address_process[0] else ''
-            elif len(startaddress_process) > 0:
-                first_address = startaddress_process[0]
-            elif len(everyday_end_address_process) > 0:
-                first_address = everyday_end_address_process[0]
+            # 计算家庭地址
+            '''
+                    查看排在第一为的地址出现的概率是否大于第二位的地址概率的threshold,
+                     比如超出10% 则认定为第一个为家庭地址，否则 为两者间平均停留时间最长的地址
+                    工作地址同理
+            '''
+            threshold_pro = 0.1
+            if len(everyday_stay_long_times_17_9_) <= 0:
+                home_address_guesss = None
+                home_address_guesss_process = None
             else:
-                first_address = ''
+                maxP = everyday_stay_long_times_17_9_[0]
+                now_index = 0
+                i = 1
+                while i<len(everyday_stay_long_times_17_9_):
+                    if abs(everyday_stay_long_times_17_9_[i]-maxP) > threshold_pro:
+                        #print("超出")
+                        break
+                    else:   # 如果概率差值不大于threshold,则选择两个中间停车时长最长的地点
+                        if everyday_stay_long_mean_stay_time_17_9_[now_index]<everyday_stay_long_mean_stay_time_17_9_[i]:
+                            now_index = i
+                        i += 1
+                #print("目前最大的地址在：%d个" %(now_index+1))
+                home_address_guesss_process = everyday_stay_long_address_17_9_process[now_index]
+
+                for i in range(len(everyday_stay_long_address_17_9)):
+                    if home_address_guesss_process in everyday_stay_long_address_17_9[i]:
+                        home_address_guesss = everyday_stay_long_address_17_9[i]
+                        break
+
+
+
+
+            # 第一地址是否相同 相同则打印
+            if home_address_guesss is not None and  work_address_guesss is not None:
+                first_address = 1 if home_address_guesss == work_address_guesss else 0
+            else:
+                first_address = -1
+
+
+
 
             # 工作地址
-            work_address_guesss = self.get_work_address(startaddress_process, everyday_end_address_process)
-
+            #work_address_guesss = self.get_work_address(startaddress_process, everyday_end_address_process)
             # 家庭地址
-            home_address_guesss = self.get_home_address(startaddress_process,everyday_end_address_process, not_in_list=list(work_address_guesss))
+            #home_address_guesss = self.get_home_address(startaddress_process,everyday_end_address_process, not_in_list=list(work_address_guesss))
 
             workdayGo, workdayGo_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=False)
             workdayGo_process, workdayGo_process_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=True)
@@ -1575,8 +1637,8 @@ class Personal_analysis:
                                        everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,
                                        everyday_stay_long_mean_stay_time_17_9_,
                                        everyday_stay_long_sum_17_9_gps, everyday_stay_long_sum_17_9_gps_,
-                                        first_address, home_address_guesss,
-                                        work_address_guesss,
+                                        first_address, home_address_guesss, home_address_guesss_process,
+                                        work_address_guesss,work_address_guesss_process,
                                         weekendGo, weekendGo_process,
                                         workdayGo, workdayGo_process,
                                         having_kindergarten, having_primary_school,
@@ -1605,8 +1667,8 @@ filePath = 'a800_1000cars.csv'
 #personalDataPath = 'personalDataPath/'
 #saveFile = 'person_info_all.xls'
 
-personalDataPath = 'test/'
-saveFile = 'person_info_test.xlsx'
+personalDataPath = 'test1/'
+saveFile = 'person_info_test1.xlsx'
 a = Personal_analysis()
 # 加载数据
 # df = a.load_data(filePath)
