@@ -488,7 +488,7 @@ class Personal_analysis:
                 cnt += 1
                 everyday_long_address = ''
         everyday_stay_long_address = sorted(everyday_stay_long_address.items(),key=lambda s:s[1],reverse=True)
-        print(everyday_stay_long_address)
+        # print(everyday_stay_long_address)
 
         # 判断取出数据的个数
         if num == None or num > len(everyday_stay_long_address):
@@ -523,7 +523,7 @@ class Personal_analysis:
         return everyday_stay_long_address_, everyday_stay_long_times, cnt
 
     # 时间段停车时长  一天中比如 这里的早6到晚9
-    def count_everyday_stay_long_address_6_21(self, df, num=None,starttime=None,endtime=None,which_day=0,precess=False):
+    def count_everyday_stay_long_address_6_21(self, df, num=None,starttime=None,endtime=None,which_day=0,precess=False, overMintues=60):
         '''
         统计每天停车最长的地址
         input :df  数据表
@@ -581,7 +581,7 @@ class Personal_analysis:
                     else:
                         stayTime = (int(now_hours) - int(last_hours)) * 60 + (int(now_mins) - int(last_mins))
                         #print("%d:%d --- %d:%d   ----last:%d" % (int(last_hours), int(last_mins), int(now_hours),int(now_mins), stayTime))
-                        if stayTime > maxStayTime and stayTime > 60:
+                        if stayTime > maxStayTime and stayTime > overMintues:
                             # print("time:%d --- %s" %(stayTime,df['end_address_name'].iloc[i-1]))
                             maxStayTime = stayTime
                             everyday_long_address = df['end_address_name'].iloc[i-1]
@@ -647,7 +647,7 @@ class Personal_analysis:
         # everyday_stay_long_times 罗列地址对应次数 如：[4,2,1,1]
         return everyday_stay_long_address_, everyday_stay_long_times, cnt,everyday_stay_long_mean_stay_time, everyday_stay_long_gps_data
 
-    def count_everyday_stay_long_address_17_9(self, df, num=None,starttime=None,endtime=None,which_day=0,precess=False):
+    def count_everyday_stay_long_address_17_9(self, df, num=None,starttime=None,endtime=None,which_day=0,precess=False, overMintues=60):
         '''
         统计每天停车最长的地址
         input :df  数据表
@@ -657,6 +657,7 @@ class Personal_analysis:
         形式 ：2018 ：2019   2018-01 ：2019-03    2018-06-08 ：2019-07-03 三种形式
         which_day : 0:全部  1：工作日  2：周末
         precess : 是否处理地址信息 比如删除前缀
+        overMintues  计算停留时间  > overMintues的地点
         output:dict 每天起始地址排序
         '''
         #print(df.shape)
@@ -683,7 +684,7 @@ class Personal_analysis:
         # 第一条记录开始  计算当前的终止时间与下一条的开始时间
         for i in range(0, df.shape[0]-1):
             sum_rec +=  1
-            #print("当前开始地址:%s -- 结束地址%s---时间范围%s --%s" %(df['start_address_name'].iloc[i],df['end_address_name'].iloc[i],df['start_time'].iloc[i],df['end_time'].iloc[i]))
+            # print("当前开始地址:%s -- 结束地址%s---时间范围%s --%s" %(df['start_address_name'].iloc[i],df['end_address_name'].iloc[i],df['start_time'].iloc[i],df['end_time'].iloc[i]))
             if df['end_address_name'].iloc[i] != df['start_address_name'].iloc[i+1]:
                 # print("起始地址与终止地址不同")
                 continue
@@ -702,7 +703,7 @@ class Personal_analysis:
 
             # print("%s --%s 每条记录时间差:%d" % (df['datetime'].iloc[i],df['datetime'].iloc[i+1],day_diff))
             # print("%d:%d --- %d:%d max:" % (
-
+            minitues = overMintues
             # int(last_hours), int(last_mins), int(now_hours), int(now_mins)),maxStayTime)
             if 17 <= last_hours <= 24:
                 if 17 <= now_hours <= 24 and day_diff == 0:
@@ -716,12 +717,12 @@ class Personal_analysis:
                 elif 0 <= now_hours <= 9 and day_diff == 1:
                     stayTime = (now_hours + 24 - last_hours) * 60 + (now_mins - last_mins)
                     if stayTime > maxStayTime:
-                        #print("%d:%d --- %d:%d max:%d" % (last_hours, last_mins, now_hours, now_mins, stayTime))
+                        # print("%d:%d --- %d:%d max:%d" % (last_hours, last_mins, now_hours, now_mins, stayTime))
                         # print("time:%d --- %s" %(stayTime,df['end_address_name'].iloc[i-1]))
                         maxStayTime = stayTime
                         everyday_long_address = df['end_address_name'].iloc[i]
                 else:
-                    if everyday_long_address != '' and maxStayTime >60:
+                    if everyday_long_address != '' and maxStayTime > minitues:
                         #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                         cnt += 1
 
@@ -748,7 +749,7 @@ class Personal_analysis:
                         maxStayTime = stayTime
                         everyday_long_address = df['end_address_name'].iloc[i]
                 else:
-                    if everyday_long_address != '' and maxStayTime >60:
+                    if everyday_long_address != '' and maxStayTime > minitues:
                         #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                         cnt += 1
                         if maxStayTime < 0:
@@ -765,7 +766,7 @@ class Personal_analysis:
                         everyday_long_address = ''
                         maxStayTime = -1000
             else:
-                if everyday_long_address != '' and maxStayTime > 60:
+                if everyday_long_address != '' and maxStayTime > minitues:
                     #print("%s--最终结果%s--时间间隔：%d" % (df['datetime'].iloc[i], everyday_long_address, maxStayTime))
                     cnt += 1
                     if maxStayTime < 0:
@@ -809,7 +810,7 @@ class Personal_analysis:
         for itemAddress in everyday_stay_long_address_:
             df_ = df[df['end_address_name'] == itemAddress]
             loc_gps = df_['end_gps_poi'].iloc[0]
-            print("地址%s:GPS:%s" %(itemAddress, loc_gps))
+            # print("地址%s:GPS:%s" %(itemAddress, loc_gps))
             everyday_stay_long_gps_data_dic[itemAddress] = loc_gps
 
         # 对地址数据进行处理
@@ -831,6 +832,7 @@ class Personal_analysis:
 
     def cal_weekday_count_figure(self, df,num =None,starttime=None,endtime=None,which_day=0):
         """
+
          num : 显示排序后前几条数据
         starttime ：开始时间
         endtime: 截止时间
@@ -915,6 +917,9 @@ class Personal_analysis:
         #print("len:%d" %len(each_hour_driving_time_standard))
         # return sort_count_list[:num], each_hour_driving_time_standard
         return sort_count_list[:num], ys
+
+
+
     def getProvince(self,start_address, num=None):
         '''
         input : start_address  由 cal_satrt_end_address(df)获得 是一个list
@@ -995,7 +1000,7 @@ class Personal_analysis:
         for i in alist:
             if i is nan:
                 i = ''
-            if '(' in i:
+            while '(' in i:
                 index1 = i.index('(')
                 if ')' in i:
                     index2 = i.index(')')
@@ -1237,55 +1242,55 @@ class Personal_analysis:
     def get_nums(self, row, hour):
         return row[hour]
 
-    def get_job_marked(self,filename,n_clusters=5,method='kmeans'):
-        """
-        :param method 'kmeans'  或者 'brich'
-        :param filename:  读取的文件名，为每个人的数据，其中包括列：each_hour_driving_time
-        :param n_clusters:  聚类个数
-        :return:  给数据进行打标记  上班类型
-        """
-        #filename = "person_info_test1.xlsx"
-        df = pd.read_excel(filename)
-
-        #将str转为list  并且标准化
-        df['each_hour_driving_time_standard'] = df['each_hour_driving_time'].apply(self.conver_to_list)
-
-        # 创建新的列，来保存各个时间数据
-        for i in range(24):
-            df['hour_' + str(i)] = df['each_hour_driving_time_standard'].apply(self.get_nums, args=(i,))
-
-        # 获取 数据 进行聚类
-        standardData = df.iloc[:, -24:]
-
-        # init='random'
-        if method == 'kmeans':
-            kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(standardData)
-            markLabels = kmeans.labels_
-        else:
-            # 两种聚类方法
-            brc = Birch(branching_factor=50, n_clusters=n_clusters, threshold=0.5, compute_labels=True).fit(standardData)
-            markLabels = brc.predict(standardData)
-
-        #打标记
-        df['job_label'] = markLabels
-
-        drop_colums = ['hour_' + str(i) for i in range(0, 24)]
-        df = df.drop(columns=drop_colums)
-        df = df.drop(columns=['each_hour_driving_time_standard'])
-        return df
-        # 作图 同于查看
-        # fig = plt.figure()
-        # test = df[df['job_label'] == 4]
-        # color = ['g', 'r', 'y', 'b']
-        # fig = plt.figure()
-        # x = [i for i in range(0, 24)]
-        # for i in range(test.shape[0]):
-        #     y1 = test['each_hour_driving_time_standard'].iloc[i]
-        #     # plt.plot(x,y1,c=color[kmeans.labels_[i]])
-        #     plt.plot(x, y1)
-        #     # plt.plot(x,y1,c=color[brc_label[i]])
-        #     plt.xticks(range(24))
-        return df
+    # def get_job_marked(self,filename,n_clusters=5,method='kmeans'):
+    #     """
+    #     :param method 'kmeans'  或者 'brich'
+    #     :param filename:  读取的文件名，为每个人的数据，其中包括列：each_hour_driving_time
+    #     :param n_clusters:  聚类个数
+    #     :return:  给数据进行打标记  上班类型
+    #     """
+    #     #filename = "person_info_test1.xlsx"
+    #     df = pd.read_excel(filename)
+    #
+    #     #将str转为list  并且标准化
+    #     df['each_hour_driving_time_standard'] = df['each_hour_driving_time'].apply(self.conver_to_list)
+    #
+    #     # 创建新的列，来保存各个时间数据
+    #     for i in range(24):
+    #         df['hour_' + str(i)] = df['each_hour_driving_time_standard'].apply(self.get_nums, args=(i,))
+    #
+    #     # 获取 数据 进行聚类
+    #     standardData = df.iloc[:, -24:]
+    #
+    #     # init='random'
+    #     if method == 'kmeans':
+    #         kmeans = KMeans(n_clusters=n_clusters, random_state=0).fit(standardData)
+    #         markLabels = kmeans.labels_
+    #     else:
+    #         # 两种聚类方法
+    #         brc = Birch(branching_factor=50, n_clusters=n_clusters, threshold=0.5, compute_labels=True).fit(standardData)
+    #         markLabels = brc.predict(standardData)
+    #
+    #     #打标记
+    #     df['job_label'] = markLabels
+    #
+    #     drop_colums = ['hour_' + str(i) for i in range(0, 24)]
+    #     df = df.drop(columns=drop_colums)
+    #     df = df.drop(columns=['each_hour_driving_time_standard'])
+    #     return df
+    #     # 作图 同于查看
+    #     # fig = plt.figure()
+    #     # test = df[df['job_label'] == 4]
+    #     # color = ['g', 'r', 'y', 'b']
+    #     # fig = plt.figure()
+    #     # x = [i for i in range(0, 24)]
+    #     # for i in range(test.shape[0]):
+    #     #     y1 = test['each_hour_driving_time_standard'].iloc[i]
+    #     #     # plt.plot(x,y1,c=color[kmeans.labels_[i]])
+    #     #     plt.plot(x, y1)
+    #     #     # plt.plot(x,y1,c=color[brc_label[i]])
+    #     #     plt.xticks(range(24))
+    #     return df
 
     def get_person_info(self, personalDataPath):
         """
@@ -1302,8 +1307,8 @@ class Personal_analysis:
                    'workdaySum',
                    'weekendSum','rate',
                    'province', 'city',
-                   'region','county',
-                   'town', 'start_to_end_list',
+                   'region',
+                    'start_to_end_list',
                     'driving_time_often','startaddress',
                     'startaddress_process','count_start_address_',
                    'sum_start_address_','everyday_end_address',
@@ -1334,6 +1339,7 @@ class Personal_analysis:
         row_index = 0
 
         filenNames = os.listdir(personalDataPath)
+        # (filenNames)
         nu_ = len(filenNames)
         for filename in filenNames:
             logger.info("写入个人数据：%s" % (filename))
@@ -1355,7 +1361,7 @@ class Personal_analysis:
                 usage_rate_workday=None; usage_rate_weekend=None
                 workdaySum=None;
                 weekendSum=None; rate=None; province=None; city=None; region=None;
-                county=None; town=None; start_to_end_list=None;
+                start_to_end_list=None;
                 driving_time_often=None; startaddress=None
                 startaddress_process=None;
                 count_start_address_=None;
@@ -1388,7 +1394,7 @@ class Personal_analysis:
                                            usage_rate_workday, usage_rate_weekend,
                                            workdaySum,
                                            weekendSum, rate, province, city, region,
-                                           county, town, start_to_end_list,
+                                           start_to_end_list,
                                            driving_time_often, startaddress,
                                            startaddress_process,
                                            count_start_address_,
@@ -1449,7 +1455,76 @@ class Personal_analysis:
                 rate = 0
 
             start_address, end_address = self.cal_satrt_end_address(df)
-            province, city, region, county, town = self.getProvince(start_address)
+
+            #市下面分为区
+            city_all = ['北京市', '天津市', '上海市', '重庆市']
+            # 自治区下面分为市
+            region_all = ['内蒙古自治区', '广西壮族自治区', '宁夏回族自治区', '新疆维吾尔自治区', '西藏自治区']
+            # 省 市 区
+            province_all = ['河北省','山西省','辽宁省','吉林省','黑龙江省','江苏省','浙江省','安徽省',
+                        '福建省','江西省','山东省','河南省','湖北省','湖南省','广东省','海南省','四川省','贵州省','云南省','陕西省','甘肃省','青海省','台湾省']
+            # 获取地址的总次数在前面的 从中抽取省市区
+            address_top_5_df = df['end_address_name'].value_counts()[:5].reset_index()
+            address_top_5 = address_top_5_df["index"]
+
+            # 第一列是地址，第二列是次数 index 和end_address_name
+            city = ''
+            region =''
+            province = ''
+
+            flag_cal_address = False
+            # 添加省级的  同时四大直辖市 和五大自治区也算
+            for address in address_top_5:
+
+                if flag_cal_address:
+                    break
+                # 五大区的  区下有市
+                for i in region_all:
+                    if i in address:
+                        province = i
+                        province_index = address.index('区')
+                        if '市' in address:
+                            city_index = address.index('市')
+                            city = address[province_index + 1:city_index + 1]
+                        else:
+                            city = ""
+                        flag_cal_address = True
+                        break
+                # 四大市的  市下直接区
+                for i in city_all:
+                    if i in address:
+                        province = i  # 市和省设置相同
+                        province_index = address.index('市')
+                        if '区' in address:
+                            region_index = address.index('区')
+                            city = address[province_index + 1:region_index + 1]
+                        else:
+                            city = ""
+                        flag_cal_address = True
+                        break
+                if flag_cal_address:
+                    break
+                # 直接是省的
+                for i in province_all:
+                    if i in address:
+                        province = i
+                        province_index = address.index('省')
+                        if '市' in address:
+                            city_index = address.index('市')
+                            city = address[province_index+1:city_index+1]
+                        if '区' in address and '市' in address:
+                            city_index = address.index('市')
+                            region_index = address.index('区')
+                            region = address[city_index+1:region_index+1]
+                        flag_cal_address = True
+                        break
+
+
+
+
+
+
+            #province, city, region, county, town = self.getProvince(start_address)
 
             start_to_end_list = self.start_to_end_list(df, 10)
             start_to_end_list = ",".join(start_to_end_list)
@@ -1480,16 +1555,16 @@ class Personal_analysis:
 
 
             everyday_stay_long_address_6_21, everyday_stay_long_times_6_21, everyday_stay_long_sum_6_21,everyday_stay_long_mean_stay_time_6_21,everyday_stay_long_sum_6_21_gps = self.count_everyday_stay_long_address_6_21(
-                df, num=4, which_day=1, precess=False)
+                df, num=4, which_day=1, precess=False,overMintues=180)
             everyday_stay_long_address_6_21_process, everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,everyday_stay_long_mean_stay_time_6_21_, everyday_stay_long_sum_6_21_gps_ = self.count_everyday_stay_long_address_6_21(
-                df, num=4, which_day=1, precess=True)
+                df, num=4, which_day=1, precess=True,overMintues=180)
             everyday_stay_long_times_6_21_ = [round(i / everyday_stay_long_sum_6_21_, 2) for i in everyday_stay_long_times_6_21_]
             '''
                        查看排在第一为的地址出现的概率是否大于第二位的地址概率的threshold,
                         比如超出10% 则认定为第一个为工作地址，否则 为两者间平均停留时间最长的地址
                        家庭地址同理
             '''
-            threshold_pro = 0.1
+            threshold_pro = 0.2
             if len(everyday_stay_long_times_6_21_) <= 0:
                 work_address_guesss = None
                 work_address_guesss_process = None
@@ -1516,9 +1591,9 @@ class Personal_analysis:
 
             # 计算17点到第二天早上9点间的停车时长最长的地址 ，根据此地址列表计算家庭地址
             everyday_stay_long_address_17_9, everyday_stay_long_times_17_9, everyday_stay_long_sum_17_9,everyday_stay_long_mean_stay_time_17_9,everyday_stay_long_sum_17_9_gps = self.count_everyday_stay_long_address_17_9(
-                df, num=4, which_day=1, precess=False)
+                df, num=4, which_day=1, precess=False, overMintues=180)
             everyday_stay_long_address_17_9_process, everyday_stay_long_times_17_9_, everyday_stay_long_sum_17_9_,everyday_stay_long_mean_stay_time_17_9_, everyday_stay_long_sum_17_9_gps_ = self.count_everyday_stay_long_address_17_9(
-                df, num=4, which_day=1, precess=True)
+                df, num=4, which_day=1, precess=True, overMintues=180)
             everyday_stay_long_times_17_9_ = [round(i / everyday_stay_long_sum_17_9_, 2) for i in
                                               everyday_stay_long_times_17_9_]
             # 计算家庭地址
@@ -1527,7 +1602,7 @@ class Personal_analysis:
                      比如超出10% 则认定为第一个为家庭地址，否则 为两者间平均停留时间最长的地址
                     工作地址同理
             '''
-            threshold_pro = 0.1
+            #threshold_pro = 0.15
             if len(everyday_stay_long_times_17_9_) <= 0:
                 home_address_guesss = None
                 home_address_guesss_process = None
@@ -1550,6 +1625,9 @@ class Personal_analysis:
                     if home_address_guesss_process in everyday_stay_long_address_17_9[i]:
                         home_address_guesss = everyday_stay_long_address_17_9[i]
                         break
+
+            df_ = df
+            df_ = df_[df_['end_address_name']==home_address_guesss]
 
 
 
@@ -1619,7 +1697,7 @@ class Personal_analysis:
                                         usage_rate_workday,usage_rate_weekend,
                                         workdaySum,
                                         weekendSum, rate, province, city, region,
-                                        county, town, start_to_end_list,
+                                        start_to_end_list,
                                         driving_time_often, startaddress,
                                         startaddress_process,
                                         count_start_address_,
@@ -1657,6 +1735,7 @@ class Personal_analysis:
         :param df:        传入df数据
         :return:
         """
+        logger.info('写入信息完成：%s' %filename)
         df.to_excel(filename)
 
 
