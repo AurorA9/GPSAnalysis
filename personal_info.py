@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import math
 from sklearn.cluster import KMeans
 from sklearn.cluster import Birch
-
+from decimal import Decimal
 import logging
 import time
 from sklearn.preprocessing import StandardScaler
@@ -919,8 +919,8 @@ class Personal_analysis:
         return sort_count_list[:num], ys
 
 
-
-    def getProvince(self,start_address, num=None):
+    # 没用
+    def getProvince1(self,start_address, num=None):
         '''
         input : start_address  由 cal_satrt_end_address(df)获得 是一个list
         获取省，市，区，县，镇等信息，这里是使用所有行车记录开始地址中最多的10进行筛选，暂时未出现不存在的情况
@@ -980,6 +980,92 @@ class Personal_analysis:
                         break
                 town = address[index + 1:address.index('镇') + 1]
         return province, city, region, county, town
+
+    def getProvince(self,df):
+        # 市下面分为区
+        city_all = ['北京市', '天津市', '上海市', '重庆市']
+        # 自治区下面分为市
+        region_all = ['内蒙古自治区', '广西壮族自治区', '宁夏回族自治区', '新疆维吾尔自治区', '西藏自治区']
+        # 省 市 区
+        province_all = ['河北省', '山西省', '辽宁省', '吉林省', '黑龙江省', '江苏省', '浙江省', '安徽省',
+                        '福建省', '江西省', '山东省', '河南省', '湖北省', '湖南省', '广东省', '海南省', '四川省', '贵州省', '云南省', '陕西省', '甘肃省',
+                        '青海省', '台湾省']
+        # 获取地址的总次数在前面的 从中抽取省市区
+        address_top_5_df = df['end_address_name'].value_counts()[:5].reset_index()
+        address_top_5 = address_top_5_df["index"]
+
+        # 第一列是地址，第二列是次数 index 和end_address_name
+        city = ''
+        region = ''
+        province = ''
+
+        flag_cal_address = False
+        # 添加省级的  同时四大直辖市 和五大自治区也算
+        for address in address_top_5:
+
+            if flag_cal_address:
+                break
+            # 五大区的  区下有市
+            for i in region_all:
+                if i in address:
+                    province = i
+                    province_index = address.index('区')
+                    if '市' in address:
+                        city_index = address.index('市')
+                        city = address[province_index + 1:city_index + 1]
+                    else:
+                        city = ""
+                    flag_cal_address = True
+                    break
+            # 四大市的  市下直接区
+            for i in city_all:
+                if i in address:
+                    province = i  # 市和省设置相同
+                    province_index = address.index('市')
+                    if '区' in address:
+                        region_index = address.index('区')
+                        city = address[province_index + 1:region_index + 1]
+                    else:
+                        city = ""
+                    flag_cal_address = True
+                    break
+            if flag_cal_address:
+                break
+            # 直接是省的
+            for i in province_all:
+                if i in address:
+                    province = i
+                    province_index = address.index('省')
+                    if '市' in address:
+                        city_index = address.index('市')
+                        city = address[province_index + 1:city_index + 1]
+                    if '区' in address and '市' in address:
+                        city_index = address.index('市')
+                        region_index = address.index('区')
+                        region = address[city_index + 1:region_index + 1]
+                    flag_cal_address = True
+                    break
+        return province,city,region
+
+    def getGPS_x_y(self,df,address):
+        '''
+        根据地址获取经纬度  （均值）
+        :param df:   数据集
+        :param address:  所要获取的地址
+        :return:    地址经纬度
+        '''
+        if address ==None or address == []:
+            return None
+        df_ = df[df['start_address_name'] == address]
+        # 保留坐标8位小数
+        gps_x = df_['start_gps_poi'].apply(lambda x: Decimal(x.split(',')[0]))
+
+        gps_y = df_['start_gps_poi'].apply(lambda x: Decimal(x.split(',')[1]))
+
+        x = np.mean(gps_x.values)
+        y = np.mean(gps_y.values)
+
+        return ','.join([str(float(x)),str(float(y))])
 
     # 求周末天数  NoworkdayNum   工作日  workdayNum
     def getWorkdayNum(self,df):
@@ -1327,6 +1413,7 @@ class Personal_analysis:
                     'everyday_stay_long_sum_17_9_gps', 'everyday_stay_long_sum_17_9_gps_',
                    'first_address', 'home_address_guesss', 'home_address_guesss_process',
                     'work_address_guesss','work_address_guesss_process',
+                   'home_address_guesss_GPS_pos', 'work_address_guesss_GPS_pos',
                     'weekendGo', 'weekendGo_process',
                     'workdayGo','workdayGo_process',
                     'having_kindergarten', 'having_primary_school',
@@ -1381,6 +1468,7 @@ class Personal_analysis:
                 everyday_stay_long_sum_17_9_gps=None;everyday_stay_long_sum_17_9_gps_=None
                 first_address=None; home_address_guesss=None; home_address_guesss_process =None
                 work_address_guesss=None; work_address_guesss_process =None
+                home_address_guesss_GPS_pos=None; work_address_guesss_GPS_pos=None
                 weekendGo=None; weekendGo_process=None
                 workdayGo=None; workdayGo_process=None
                 having_kindergarten=None; having_primary_school=None
@@ -1414,6 +1502,7 @@ class Personal_analysis:
                                            everyday_stay_long_sum_17_9_gps,everyday_stay_long_sum_17_9_gps_,
                                            first_address, home_address_guesss,home_address_guesss_process,
                                            work_address_guesss,work_address_guesss_process,
+                                           home_address_guesss_GPS_pos,work_address_guesss_GPS_pos,
                                            weekendGo, weekendGo_process,
                                            workdayGo, workdayGo_process,
                                            having_kindergarten, having_primary_school,
@@ -1456,74 +1545,9 @@ class Personal_analysis:
 
             start_address, end_address = self.cal_satrt_end_address(df)
 
-            #市下面分为区
-            city_all = ['北京市', '天津市', '上海市', '重庆市']
-            # 自治区下面分为市
-            region_all = ['内蒙古自治区', '广西壮族自治区', '宁夏回族自治区', '新疆维吾尔自治区', '西藏自治区']
-            # 省 市 区
-            province_all = ['河北省','山西省','辽宁省','吉林省','黑龙江省','江苏省','浙江省','安徽省',
-                        '福建省','江西省','山东省','河南省','湖北省','湖南省','广东省','海南省','四川省','贵州省','云南省','陕西省','甘肃省','青海省','台湾省']
-            # 获取地址的总次数在前面的 从中抽取省市区
-            address_top_5_df = df['end_address_name'].value_counts()[:5].reset_index()
-            address_top_5 = address_top_5_df["index"]
 
-            # 第一列是地址，第二列是次数 index 和end_address_name
-            city = ''
-            region =''
-            province = ''
-
-            flag_cal_address = False
-            # 添加省级的  同时四大直辖市 和五大自治区也算
-            for address in address_top_5:
-
-                if flag_cal_address:
-                    break
-                # 五大区的  区下有市
-                for i in region_all:
-                    if i in address:
-                        province = i
-                        province_index = address.index('区')
-                        if '市' in address:
-                            city_index = address.index('市')
-                            city = address[province_index + 1:city_index + 1]
-                        else:
-                            city = ""
-                        flag_cal_address = True
-                        break
-                # 四大市的  市下直接区
-                for i in city_all:
-                    if i in address:
-                        province = i  # 市和省设置相同
-                        province_index = address.index('市')
-                        if '区' in address:
-                            region_index = address.index('区')
-                            city = address[province_index + 1:region_index + 1]
-                        else:
-                            city = ""
-                        flag_cal_address = True
-                        break
-                if flag_cal_address:
-                    break
-                # 直接是省的
-                for i in province_all:
-                    if i in address:
-                        province = i
-                        province_index = address.index('省')
-                        if '市' in address:
-                            city_index = address.index('市')
-                            city = address[province_index+1:city_index+1]
-                        if '区' in address and '市' in address:
-                            city_index = address.index('市')
-                            region_index = address.index('区')
-                            region = address[city_index+1:region_index+1]
-                        flag_cal_address = True
-                        break
-
-
-
-
-
-
+            # 获取省市区
+            province, city, region = self.getProvince(df)
             #province, city, region, county, town = self.getProvince(start_address)
 
             start_to_end_list = self.start_to_end_list(df, 10)
@@ -1564,7 +1588,8 @@ class Personal_analysis:
                         比如超出10% 则认定为第一个为工作地址，否则 为两者间平均停留时间最长的地址
                        家庭地址同理
             '''
-            threshold_pro = 0.2
+            threshold_pro = 0.3
+            workaddress_not_find_origin =False # 工作地址没有找到原地址，使用另一种方法求GPS地址
             if len(everyday_stay_long_times_6_21_) <= 0:
                 work_address_guesss = None
                 work_address_guesss_process = None
@@ -1583,11 +1608,25 @@ class Personal_analysis:
                         i += 1
                 # print("目前最大的地址在：%d个" %(now_index+1))
                 work_address_guesss_process = everyday_stay_long_address_6_21_process[now_index]
-
-                for i in range(len(everyday_stay_long_address_6_21)):
-                    if work_address_guesss_process in everyday_stay_long_address_6_21[i]:
-                        work_address_guesss = everyday_stay_long_address_6_21[i]
-                        break
+                # 获取地址其完整信息
+                work_address_guesss = ''
+                if work_address_guesss_process!=None or work_address_guesss_process !='':
+                    for i in range(len(everyday_stay_long_address_6_21)):
+                        if work_address_guesss_process in everyday_stay_long_address_6_21[i]:
+                            work_address_guesss = everyday_stay_long_address_6_21[i]
+                            break
+                    # 说明简称在原称里没找到， 则地址置为简称 可能原称里有（）被删除
+                    if work_address_guesss == '':
+                        work_address_guesss = work_address_guesss_process
+                        workaddress_not_find_origin = True  # 工作地址没有找到原地址，使用另一种方法求GPS地址
+            print(work_address_guesss)
+            # 工作地址没有找到原地址，使用另一种方法求GPS地址
+            if workaddress_not_find_origin :
+                index__ = everyday_stay_long_address_6_21_process.index(work_address_guesss)
+                work_address_guesss_GPS_pos = everyday_stay_long_sum_6_21_gps_[index__]
+            else:
+                work_address_guesss_GPS_pos = self.getGPS_x_y(df, work_address_guesss)
+            #work_address_guesss_GPS_pos = ''
 
             # 计算17点到第二天早上9点间的停车时长最长的地址 ，根据此地址列表计算家庭地址
             everyday_stay_long_address_17_9, everyday_stay_long_times_17_9, everyday_stay_long_sum_17_9,everyday_stay_long_mean_stay_time_17_9,everyday_stay_long_sum_17_9_gps = self.count_everyday_stay_long_address_17_9(
@@ -1603,6 +1642,7 @@ class Personal_analysis:
                     工作地址同理
             '''
             #threshold_pro = 0.15
+            homeaddress_not_find_origin = False
             if len(everyday_stay_long_times_17_9_) <= 0:
                 home_address_guesss = None
                 home_address_guesss_process = None
@@ -1620,23 +1660,33 @@ class Personal_analysis:
                         i += 1
                 #print("目前最大的地址在：%d个" %(now_index+1))
                 home_address_guesss_process = everyday_stay_long_address_17_9_process[now_index]
-
-                for i in range(len(everyday_stay_long_address_17_9)):
-                    if home_address_guesss_process in everyday_stay_long_address_17_9[i]:
-                        home_address_guesss = everyday_stay_long_address_17_9[i]
-                        break
-
-            df_ = df
-            df_ = df_[df_['end_address_name']==home_address_guesss]
-
-
-
+                home_address_guesss = ''
+                if home_address_guesss_process !=None and home_address_guesss_process !='':
+                    # 获取地址其完整信息
+                    for i in range(len(everyday_stay_long_address_17_9)):
+                        if home_address_guesss_process in everyday_stay_long_address_17_9[i]:
+                            home_address_guesss = everyday_stay_long_address_17_9[i]
+                            break
+                    # 说明简称在原称里没找到， 则地址置为简称 可能原称里有（）被删除
+                    if home_address_guesss =='':
+                        home_address_guesss = home_address_guesss_process
+                        homeaddress_not_find_origin =True
+            # 获取家庭地址GPS信息
+            # 工作地址没有找到原地址，使用另一种方法求GPS地址
+            if homeaddress_not_find_origin :
+                index__ = everyday_stay_long_address_17_9_process.index(home_address_guesss)
+                home_address_guesss_GPS_pos = everyday_stay_long_sum_17_9_gps_[index__]
+            else:
+                home_address_guesss_GPS_pos = self.getGPS_x_y(df, home_address_guesss)
+            #home_address_guesss_GPS_pos = ''
 
             # 第一地址是否相同 相同则打印
             if home_address_guesss is not None and  work_address_guesss is not None:
                 first_address = 1 if home_address_guesss == work_address_guesss else 0
             else:
                 first_address = -1
+
+
 
 
 
@@ -1717,6 +1767,7 @@ class Personal_analysis:
                                        everyday_stay_long_sum_17_9_gps, everyday_stay_long_sum_17_9_gps_,
                                         first_address, home_address_guesss, home_address_guesss_process,
                                         work_address_guesss,work_address_guesss_process,
+                                        home_address_guesss_GPS_pos, work_address_guesss_GPS_pos,
                                         weekendGo, weekendGo_process,
                                         workdayGo, workdayGo_process,
                                         having_kindergarten, having_primary_school,
