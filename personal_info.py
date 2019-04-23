@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import math
 from sklearn.cluster import KMeans
 from sklearn.cluster import Birch
+import gps_poi_analysis
 from decimal import Decimal
 import logging
 import time
@@ -1414,6 +1415,8 @@ class Personal_analysis:
                    'first_address', 'home_address_guesss', 'home_address_guesss_process',
                     'work_address_guesss','work_address_guesss_process',
                    'home_address_guesss_GPS_pos', 'work_address_guesss_GPS_pos',
+                    'home_address_gps_lat_lng','work_address_gps_lat_lng',
+                    'home_address_gps_prob','work_address_gps_prob',
                     'weekendGo', 'weekendGo_process',
                     'workdayGo','workdayGo_process',
                     'having_kindergarten', 'having_primary_school',
@@ -1469,6 +1472,8 @@ class Personal_analysis:
                 first_address=None; home_address_guesss=None; home_address_guesss_process =None
                 work_address_guesss=None; work_address_guesss_process =None
                 home_address_guesss_GPS_pos=None; work_address_guesss_GPS_pos=None
+                home_address_gps_lat_lng=None; work_address_gps_lat_lng=None
+                home_address_gps_prob =None; work_address_gps_prob=None
                 weekendGo=None; weekendGo_process=None
                 workdayGo=None; workdayGo_process=None
                 having_kindergarten=None; having_primary_school=None
@@ -1503,6 +1508,8 @@ class Personal_analysis:
                                            first_address, home_address_guesss,home_address_guesss_process,
                                            work_address_guesss,work_address_guesss_process,
                                            home_address_guesss_GPS_pos,work_address_guesss_GPS_pos,
+                                           home_address_gps_lat_lng, work_address_gps_lat_lng,
+                                           home_address_gps_prob,work_address_gps_prob,
                                            weekendGo, weekendGo_process,
                                            workdayGo, workdayGo_process,
                                            having_kindergarten, having_primary_school,
@@ -1686,9 +1693,11 @@ class Personal_analysis:
             else:
                 first_address = -1
 
+            home_address_gps_lng,home_address_gps_lat,home_address_gps_prob = gps_poi_analysis.get_home_address_gps(df)
+            work_address_gps_lng,work_address_gps_lat,work_address_gps_prob = gps_poi_analysis.get_work_address_gps(df)
 
-
-
+            home_address_gps_lat_lng = str(home_address_gps_lng) + ',' + str(home_address_gps_lat)
+            work_address_gps_lat_lng = str(work_address_gps_lng) + ',' + str(work_address_gps_lat)
 
 
             # 工作地址
@@ -1768,6 +1777,8 @@ class Personal_analysis:
                                         first_address, home_address_guesss, home_address_guesss_process,
                                         work_address_guesss,work_address_guesss_process,
                                         home_address_guesss_GPS_pos, work_address_guesss_GPS_pos,
+                                        home_address_gps_lat_lng, work_address_gps_lat_lng,
+                                       home_address_gps_prob, work_address_gps_prob,
                                         weekendGo, weekendGo_process,
                                         workdayGo, workdayGo_process,
                                         having_kindergarten, having_primary_school,
@@ -1794,11 +1805,11 @@ class Personal_analysis:
 
 #filePath = 'GPSData-origin.xlsx'
 filePath = 'a800_1000cars.csv'
-#personalDataPath = 'personalDataPath/'
-#saveFile = 'person_info_all.xls'
+personalDataPath = 'personalDataPath/'
+saveFile = 'person_info_all.xls'
 
-personalDataPath = 'test1/'
-saveFile = 'person_info_test1.xlsx'
+# personalDataPath = 'test/'
+# saveFile = 'person_info_test.xlsx'
 a = Personal_analysis()
 # 加载数据
 # df = a.load_data(filePath)
