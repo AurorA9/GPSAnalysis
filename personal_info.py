@@ -1,6 +1,7 @@
 import pandas as pd
 import os,sys
 import re
+import requests
 import datetime
 import numpy as np
 import os,sys
@@ -42,7 +43,7 @@ class Personal_analysis:
         # except ValueError:
         #     pass
         # if row ==' ':
-        #     print(11)
+
         year =int(row[0:4])
         mon = int(row[5:7])
         day = int(row[8:10])
@@ -323,8 +324,8 @@ class Personal_analysis:
                 cnt += 1
         everyday_first_stop_address = sorted(everyday_first_stop_address.items(), key=lambda s:s[1], reverse=True)
 
-        print(everyday_first_stop_address)
-        print(cnt)
+        # print(everyday_first_stop_address)
+        # print(cnt)
         # 判断取出数据的个数
         if num == None or num > len(everyday_first_stop_address):
             num = len(everyday_first_stop_address)
@@ -1296,12 +1297,12 @@ class Personal_analysis:
                 break
         return school
 
-    def judge_is_worker(self,lista):
-        if len(lista) == 0:
-            return '非上班族'
-        if lista[0]>=5 and lista[0]<=10 and lista[1] >=14 and lista[1] <=22:
-            return "上班族"
-        return "非上班族"
+    # def judge_is_worker(self,lista):
+    #     if len(lista) == 0:
+    #         return '非上班族'
+    #     if lista[0]>=5 and lista[0]<=10 and lista[1] >=14 and lista[1] <=22:
+    #         return "上班族"
+    #     return "非上班族"
 
     def get_consumer_address(self, lista):
         consumer_a = []
@@ -1328,6 +1329,7 @@ class Personal_analysis:
 
     def get_nums(self, row, hour):
         return row[hour]
+
 
     # def get_job_marked(self,filename,n_clusters=5,method='kmeans'):
     #     """
@@ -1395,16 +1397,19 @@ class Personal_analysis:
                    'weekendSum','rate',
                    'province', 'city',
                    'region',
-                    'start_to_end_list',
-                    'driving_time_often','startaddress',
-                    'startaddress_process','count_start_address_',
-                   'sum_start_address_','everyday_end_address',
-                   'everyday_end_address_process','count_everyday_end_address_',
-                   'sum_everyday_end_address_','everyday_first_stop_address',
-                   'everyday_first_stop_address_process','everyday_first_stop_times_',
-                   'everyday_first_stop_times_sum_',
-                   'everyday_stay_long_address', 'everyday_stay_long_address_process',
-                   'everyday_stay_long_times_', 'everyday_stay_long_sum_',
+
+                   #  'start_to_end_list',
+                   #  'driving_time_often','startaddress',
+                   #  'startaddress_process','count_start_address_',
+                   # 'sum_start_address_','everyday_end_address',
+                   # 'everyday_end_address_process','count_everyday_end_address_',
+                   # 'sum_everyday_end_address_','everyday_first_stop_address',
+                   # 'everyday_first_stop_address_process','everyday_first_stop_times_',
+                   # 'everyday_first_stop_times_sum_',
+                   # 'everyday_stay_long_address', 'everyday_stay_long_address_process',
+                   # 'everyday_stay_long_times_', 'everyday_stay_long_sum_',
+
+
                    'everyday_stay_long_address_6_21', 'everyday_stay_long_address_6_21_process',
                    'everyday_stay_long_times_6_21_', 'everyday_stay_long_sum_6_21_',
                    'everyday_stay_long_mean_stay_time_6_21_',
@@ -1415,14 +1420,21 @@ class Personal_analysis:
                    'first_address', 'home_address_guesss', 'home_address_guesss_process',
                     'work_address_guesss','work_address_guesss_process',
                    'home_address_guesss_GPS_pos', 'work_address_guesss_GPS_pos',
-                    'home_address_gps_lat_lng','work_address_gps_lat_lng',
-                    'home_address_gps_prob','work_address_gps_prob',
-                    'weekendGo', 'weekendGo_process',
-                    'workdayGo','workdayGo_process',
-                    'having_kindergarten', 'having_primary_school',
-                    'having_middle_school', 'is_office_worker',
-                    'consumer_address',
-                    'each_hour_driving_time'
+                    'home_address_gps_by_dbscan_lng','home_address_gps_by_dbscan_lat','home_address_gps_by_dbscan_prob',
+                    'work_address_gps_by_dbscan_lng', 'work_address_gps_by_dbscan_lat', 'work_address_gps_by_dbscan_prob',
+
+                   'home_address_gps_by_kde_lng', 'home_address_gps_by_kde_lat',
+                   'work_address_gps_by_kde_lng', 'work_address_gps_by_kde_lat',
+                   'diff_home_lng', 'diff_home_lat', 'diff_work_lng', 'diff_work_lat',
+
+                   'home_address_gps_by_dbscan', 'home_address_gps_by_kde',
+                   'work_address_gps_by_dbscan', 'work_address_gps_by_kde',
+                    # 'weekendGo', 'weekendGo_process',
+                    # 'workdayGo','workdayGo_process',
+                    # 'having_kindergarten', 'having_primary_school',
+                    # 'having_middle_school', 'is_office_worker',
+                    # 'consumer_address',
+                    # 'each_hour_driving_time'
                    ]
 
         save_msg = pd.DataFrame(columns=columns)
@@ -1444,24 +1456,26 @@ class Personal_analysis:
 
 
             if car_driving_day < 30:
-                print("行使天数少于30天")
+                #print("行使天数少于30天")
                 car_driving_time_everyday=None
                 start_datetime=None; end_datetime=None; day_between_start_end=None
                 usage_rate_day=None;workdaySum_dring=None; weekendSum_dring=None
                 usage_rate_workday=None; usage_rate_weekend=None
                 workdaySum=None;
                 weekendSum=None; rate=None; province=None; city=None; region=None;
-                start_to_end_list=None;
-                driving_time_often=None; startaddress=None
-                startaddress_process=None;
-                count_start_address_=None;
-                sum_start_address_=None;
-                everyday_end_address=None; everyday_end_address_process=None;
-                count_everyday_end_address_=None; sum_everyday_end_address_=None;
-                everyday_first_stop_address=None; everyday_first_stop_address_process=None;
-                everyday_first_stop_times_=None; everyday_first_stop_times_sum_=None;
-                everyday_stay_long_address=None; everyday_stay_long_address_process=None
-                everyday_stay_long_times_=None; everyday_stay_long_sum_=None
+
+                # start_to_end_list=None;
+                # driving_time_often=None; startaddress=None
+                # startaddress_process=None;
+                # count_start_address_=None;
+                # sum_start_address_=None;
+                # everyday_end_address=None; everyday_end_address_process=None;
+                # count_everyday_end_address_=None; sum_everyday_end_address_=None;
+                # everyday_first_stop_address=None; everyday_first_stop_address_process=None;
+                # everyday_first_stop_times_=None; everyday_first_stop_times_sum_=None;
+                # everyday_stay_long_address=None; everyday_stay_long_address_process=None
+                # everyday_stay_long_times_=None; everyday_stay_long_sum_=None
+
                 everyday_stay_long_address_6_21=None; everyday_stay_long_address_6_21_process=None
                 everyday_stay_long_times_6_21_=None; everyday_stay_long_sum_6_21_=None
                 everyday_stay_long_mean_stay_time_6_21_ = None
@@ -1472,14 +1486,22 @@ class Personal_analysis:
                 first_address=None; home_address_guesss=None; home_address_guesss_process =None
                 work_address_guesss=None; work_address_guesss_process =None
                 home_address_guesss_GPS_pos=None; work_address_guesss_GPS_pos=None
-                home_address_gps_lat_lng=None; work_address_gps_lat_lng=None
-                home_address_gps_prob =None; work_address_gps_prob=None
-                weekendGo=None; weekendGo_process=None
-                workdayGo=None; workdayGo_process=None
-                having_kindergarten=None; having_primary_school=None
-                having_middle_school=None; is_office_worker=None
-                consumer_address=None
-                each_hour_driving_time=None
+
+                home_address_gps_by_dbscan_lng=None; home_address_gps_by_dbscan_lat=None; home_address_gps_by_dbscan_prob=None
+                work_address_gps_by_dbscan_lng=None; work_address_gps_by_dbscan_lat=None; work_address_gps_by_dbscan_prob=None
+
+                home_address_gps_by_kde_lng=None; home_address_gps_by_kde_lat=None
+                work_address_gps_by_kde_lng=None; work_address_gps_by_kde_lat=None
+                diff_home_lng=None; diff_home_lat=None; diff_work_lng=None; diff_work_lat=None
+
+                home_address_gps_by_dbscan=None; home_address_gps_by_kde=None
+                work_address_gps_by_dbscan=None; work_address_gps_by_kde=None
+                # weekendGo=None; weekendGo_process=None
+                # workdayGo=None; workdayGo_process=None
+                # having_kindergarten=None; having_primary_school=None
+                # having_middle_school=None; is_office_worker=None
+                # consumer_address=None
+                # each_hour_driving_time=None
                 save_msg.loc[row_index] = [user_id, car_id, car_driving_time,
                                            car_driving_day, car_driving_time_everyday,
                                            start_datetime, end_datetime, day_between_start_end,
@@ -1487,17 +1509,19 @@ class Personal_analysis:
                                            usage_rate_workday, usage_rate_weekend,
                                            workdaySum,
                                            weekendSum, rate, province, city, region,
-                                           start_to_end_list,
-                                           driving_time_often, startaddress,
-                                           startaddress_process,
-                                           count_start_address_,
-                                           sum_start_address_,
-                                           everyday_end_address, everyday_end_address_process,
-                                           count_everyday_end_address_, sum_everyday_end_address_,
-                                           everyday_first_stop_address, everyday_first_stop_address_process,
-                                           everyday_first_stop_times_, everyday_first_stop_times_sum_,
-                                           everyday_stay_long_address, everyday_stay_long_address_process,
-                                           everyday_stay_long_times_, everyday_stay_long_sum_,
+
+                                           # start_to_end_list,
+                                           # driving_time_often, startaddress,
+                                           # startaddress_process,
+                                           # count_start_address_,
+                                           # sum_start_address_,
+                                           # everyday_end_address, everyday_end_address_process,
+                                           # count_everyday_end_address_, sum_everyday_end_address_,
+                                           # everyday_first_stop_address, everyday_first_stop_address_process,
+                                           # everyday_first_stop_times_, everyday_first_stop_times_sum_,
+                                           # everyday_stay_long_address, everyday_stay_long_address_process,
+                                           # everyday_stay_long_times_, everyday_stay_long_sum_,
+
                                            everyday_stay_long_address_6_21, everyday_stay_long_address_6_21_process,
                                            everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,
                                            everyday_stay_long_mean_stay_time_6_21_,
@@ -1508,14 +1532,24 @@ class Personal_analysis:
                                            first_address, home_address_guesss,home_address_guesss_process,
                                            work_address_guesss,work_address_guesss_process,
                                            home_address_guesss_GPS_pos,work_address_guesss_GPS_pos,
-                                           home_address_gps_lat_lng, work_address_gps_lat_lng,
-                                           home_address_gps_prob,work_address_gps_prob,
-                                           weekendGo, weekendGo_process,
-                                           workdayGo, workdayGo_process,
-                                           having_kindergarten, having_primary_school,
-                                           having_middle_school, is_office_worker,
-                                           consumer_address,
-                                           each_hour_driving_time,
+
+                                           home_address_gps_by_dbscan_lng, home_address_gps_by_dbscan_lat,
+                                           home_address_gps_by_dbscan_prob,
+                                           work_address_gps_by_dbscan_lng, work_address_gps_by_dbscan_lat,
+                                           work_address_gps_by_dbscan_prob,
+
+                                           home_address_gps_by_kde_lng, home_address_gps_by_kde_lat,
+                                           work_address_gps_by_kde_lng, work_address_gps_by_kde_lat,
+                                           diff_home_lng, diff_home_lat, diff_work_lng, diff_work_lat,
+
+                                           home_address_gps_by_dbscan, home_address_gps_by_kde,
+                                           work_address_gps_by_dbscan, work_address_gps_by_kde,
+                                           # weekendGo, weekendGo_process,
+                                           # workdayGo, workdayGo_process,
+                                           # having_kindergarten, having_primary_school,
+                                           # having_middle_school, is_office_worker,
+                                           # consumer_address,
+                                           # each_hour_driving_time,
                                            ]
                 row_index += 1
                 logger.info("写入个人数据：%s....进度%0.2f" % (user_id, row_index / nu_))
@@ -1556,33 +1590,33 @@ class Personal_analysis:
             # 获取省市区
             province, city, region = self.getProvince(df)
             #province, city, region, county, town = self.getProvince(start_address)
-
-            start_to_end_list = self.start_to_end_list(df, 10)
-            start_to_end_list = ",".join(start_to_end_list)
+            #
+            # start_to_end_list = self.start_to_end_list(df, 10)
+            # start_to_end_list = ",".join(start_to_end_list)
 
             # address_ofen = self.get_address_often(df,10)
             # print(address_ofen)
             # address_ofen = ','.join('%s' %address for address in address_ofen)
 
-            # 每天起始地址计算
-            startaddress, count_start_address, sum_start_address = self.count_everyday_first_address(df, num =4, which_day=1, precess=False)
-            startaddress_process, count_start_address_, sum_start_address_ = self.count_everyday_first_address(df, num=4, which_day=1,precess=True)
-            # 计算每个的概率
-            count_start_address_ = [round(i / sum_start_address_, 2) for i in count_start_address_]
+            # # 每天起始地址计算
+            # startaddress, count_start_address, sum_start_address = self.count_everyday_first_address(df, num =4, which_day=1, precess=False)
+            # startaddress_process, count_start_address_, sum_start_address_ = self.count_everyday_first_address(df, num=4, which_day=1,precess=True)
+            # # 计算每个的概率
+            # count_start_address_ = [round(i / sum_start_address_, 2) for i in count_start_address_]
 
-            everyday_end_address,count_everyday_end_address, sum_everyday_end_address = self.count_everyday_last_address(df, num=4, which_day=1)
-            everyday_end_address_process, count_everyday_end_address_, sum_everyday_end_address_ = self.count_everyday_last_address(df, num=4, which_day=1, precess=True)
-            count_start_address_ = [round(i / sum_everyday_end_address_, 2) for i in count_everyday_end_address_]
+            # everyday_end_address,count_everyday_end_address, sum_everyday_end_address = self.count_everyday_last_address(df, num=4, which_day=1)
+            # everyday_end_address_process, count_everyday_end_address_, sum_everyday_end_address_ = self.count_everyday_last_address(df, num=4, which_day=1, precess=True)
+            # count_start_address_ = [round(i / sum_everyday_end_address_, 2) for i in count_everyday_end_address_]
+            #
+            # everyday_first_stop_address, everyday_first_stop_times, everyday_first_stop_times_sum =self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=False)
+            # everyday_first_stop_address_process, everyday_first_stop_times_, everyday_first_stop_times_sum_ = self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=True)
+            # everyday_first_stop_times_ = [round(i / everyday_first_stop_times_sum_, 2) for i in everyday_first_stop_times_]
 
-            everyday_first_stop_address, everyday_first_stop_times, everyday_first_stop_times_sum =self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=False)
-            everyday_first_stop_address_process, everyday_first_stop_times_, everyday_first_stop_times_sum_ = self.count_everyday_first_stop_address(df, num=4, which_day=1, precess=True)
-            everyday_first_stop_times_ = [round(i / everyday_first_stop_times_sum_, 2) for i in everyday_first_stop_times_]
 
-
-            everyday_stay_long_address, everyday_stay_long_times, everyday_stay_long_sum = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=False)
-            everyday_stay_long_address_process, everyday_stay_long_times_, everyday_stay_long_sum_ = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=True)
-            everyday_stay_long_times_ = [round(i / everyday_stay_long_sum_, 2) for i in everyday_stay_long_times_]
-
+            # everyday_stay_long_address, everyday_stay_long_times, everyday_stay_long_sum = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=False)
+            # everyday_stay_long_address_process, everyday_stay_long_times_, everyday_stay_long_sum_ = self.count_everyday_stay_long_address(df, num=4, which_day=1, precess=True)
+            # everyday_stay_long_times_ = [round(i / everyday_stay_long_sum_, 2) for i in everyday_stay_long_times_]
+            #
 
 
             everyday_stay_long_address_6_21, everyday_stay_long_times_6_21, everyday_stay_long_sum_6_21,everyday_stay_long_mean_stay_time_6_21,everyday_stay_long_sum_6_21_gps = self.count_everyday_stay_long_address_6_21(
@@ -1626,7 +1660,7 @@ class Personal_analysis:
                     if work_address_guesss == '':
                         work_address_guesss = work_address_guesss_process
                         workaddress_not_find_origin = True  # 工作地址没有找到原地址，使用另一种方法求GPS地址
-            print(work_address_guesss)
+
             # 工作地址没有找到原地址，使用另一种方法求GPS地址
             if workaddress_not_find_origin :
                 index__ = everyday_stay_long_address_6_21_process.index(work_address_guesss)
@@ -1665,7 +1699,7 @@ class Personal_analysis:
                         if everyday_stay_long_mean_stay_time_17_9_[now_index]<everyday_stay_long_mean_stay_time_17_9_[i]:
                             now_index = i
                         i += 1
-                #print("目前最大的地址在：%d个" %(now_index+1))
+
                 home_address_guesss_process = everyday_stay_long_address_17_9_process[now_index]
                 home_address_guesss = ''
                 if home_address_guesss_process !=None and home_address_guesss_process !='':
@@ -1693,11 +1727,41 @@ class Personal_analysis:
             else:
                 first_address = -1
 
-            home_address_gps_lng,home_address_gps_lat,home_address_gps_prob = gps_poi_analysis.get_home_address_gps(df)
-            work_address_gps_lng,work_address_gps_lat,work_address_gps_prob = gps_poi_analysis.get_work_address_gps(df)
+            home_address_gps_by_dbscan_lng,home_address_gps_by_dbscan_lat,home_address_gps_by_dbscan_prob = gps_poi_analysis.get_home_address_gps_by_DBSCAN(df)
+            work_address_gps_by_dbscan_lng,work_address_gps_by_dbscan_lat,work_address_gps_by_dbscan_prob = gps_poi_analysis.get_work_address_gps_by_DBSCAN(df)
 
-            home_address_gps_lat_lng = str(home_address_gps_lng) + ',' + str(home_address_gps_lat)
-            work_address_gps_lat_lng = str(work_address_gps_lng) + ',' + str(work_address_gps_lat)
+            home_address_gps_by_kde_lng, home_address_gps_by_kde_lat = gps_poi_analysis.get_home_address_gps_by_KDE(df)
+            work_address_gps_by_kde_lng, work_address_gps_by_kde_lat = gps_poi_analysis.get_work_address_gps_by_KDE(df)
+
+            diff_home_lng = abs(home_address_gps_by_dbscan_lng - home_address_gps_by_kde_lng)
+            diff_home_lat = abs(home_address_gps_by_dbscan_lat - home_address_gps_by_kde_lat)
+
+            diff_work_lng = abs(work_address_gps_by_dbscan_lng - work_address_gps_by_kde_lng)
+            diff_work_lat = abs(work_address_gps_by_dbscan_lat - work_address_gps_by_kde_lat)
+
+            if home_address_gps_by_dbscan_lng!=0 and home_address_gps_by_dbscan_lng!=None:
+                home_address_gps_by_dbscan = gps_poi_analysis.get_request_json(home_address_gps_by_dbscan_lng,home_address_gps_by_dbscan_lat)
+            else :
+                home_address_gps_by_dbscan =None
+            if home_address_gps_by_kde_lng != 0 and home_address_gps_by_kde_lng != None:
+                home_address_gps_by_kde = gps_poi_analysis.get_request_json(home_address_gps_by_kde_lng,home_address_gps_by_kde_lat)
+            else:
+                home_address_gps_by_kde = None
+            if work_address_gps_by_dbscan_lng!=0 and work_address_gps_by_dbscan_lng!=None:
+                work_address_gps_by_dbscan = gps_poi_analysis.get_request_json(work_address_gps_by_dbscan_lng,work_address_gps_by_dbscan_lat)
+            else:
+                work_address_gps_by_dbscan =None
+
+
+            if work_address_gps_by_kde_lng != 0 and work_address_gps_by_kde_lng != None:
+                work_address_gps_by_kde = gps_poi_analysis.get_request_json(work_address_gps_by_kde_lng,work_address_gps_by_kde_lat)
+            else:
+                work_address_gps_by_kde = None
+
+
+
+            # home_address_gps_lat_lng = str(home_address_gps_lng) + ',' + str(home_address_gps_lat)
+            # work_address_gps_lat_lng = str(work_address_gps_lng) + ',' + str(work_address_gps_lat)
 
 
             # 工作地址
@@ -1705,49 +1769,52 @@ class Personal_analysis:
             # 家庭地址
             #home_address_guesss = self.get_home_address(startaddress_process,everyday_end_address_process, not_in_list=list(work_address_guesss))
 
-            workdayGo, workdayGo_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=False)
-            workdayGo_process, workdayGo_process_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=True)
+            # workdayGo, workdayGo_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=False)
+            # workdayGo_process, workdayGo_process_ = self.cal_satrt_end_address(df, 10, which_day=1, precess=True)
+            #
+            # weekendGo, weekendGo_ = self.cal_satrt_end_address(df, 10, which_day=2, precess=False)
+            # weekendGo_process, weekendGo_process_ = self.cal_satrt_end_address(df, 20, which_day=2, precess=True)
 
-            weekendGo, weekendGo_ = self.cal_satrt_end_address(df, 10, which_day=2, precess=False)
-            weekendGo_process, weekendGo_process_ = self.cal_satrt_end_address(df, 20, which_day=2, precess=True)
+            # lista = list(set(startaddress_process + everyday_end_address_process + workdayGo_process))
+            #
+            #
+            #
+            #
+            # having_kindergarten = self.get_kindergarten(lista)
+            # having_primary_school = self.get_primary_school(lista)
+            # having_middle_school = self.get_middle_school(lista)
+            # consumer_address = self.get_consumer_address(weekendGo_process)
 
-            lista = list(set(startaddress_process + everyday_end_address_process + workdayGo_process))
-
-            having_kindergarten = self.get_kindergarten(lista)
-            having_primary_school = self.get_primary_school(lista)
-            having_middle_school = self.get_middle_school(lista)
-            consumer_address = self.get_consumer_address(weekendGo_process)
 
 
+            # driving_time_often = []
+            # sort_count_list, each_hour_driving_time = self.cal_weekday_count_figure(df,which_day=1)
 
-            driving_time_often = []
-            sort_count_list, each_hour_driving_time = self.cal_weekday_count_figure(df,which_day=1)
-
-            get_value = True # 获取工作时间点 ，假设两者时间至少相差5小时
-            loop_index = 0
-            while get_value:
-                if loop_index > 5 or loop_index >= len(sort_count_list):
-                    driving_time_often = []
-                    get_value = False
-                    logger.info("未求解书上下班时间.....")
-                    break
-                if loop_index == 0:
-                    driving_time_often.append(int(sort_count_list[loop_index][0]))
-                else:
-                    if abs(int(sort_count_list[loop_index][0]) - driving_time_often[-1]) > 6:
-                        driving_time_often.append(int(sort_count_list[loop_index][0]))
-
-                loop_index += 1
-
-                if len(driving_time_often) == 2:
-                    get_value = False
-            if len(driving_time_often) > 1:
-                driving_time_often.sort()   # 时间由早到晚排序
-                driving_time_often[0] += 1   # 起始时间加1小时  因为原来统计的时间是一小时之内的 比如8点 代表 8-9点出门 即9点开始上班
-                #driving_time_often_str = '-'.join('%s点' % num for num in driving_time_often)
+            # get_value = True # 获取工作时间点 ，假设两者时间至少相差5小时
+            # loop_index = 0
+            # while get_value:
+            #     if loop_index > 5 or loop_index >= len(sort_count_list):
+            #         driving_time_often = []
+            #         get_value = False
+            #         logger.info("未求解书上下班时间.....")
+            #         break
+            #     if loop_index == 0:
+            #         driving_time_often.append(int(sort_count_list[loop_index][0]))
+            #     else:
+            #         if abs(int(sort_count_list[loop_index][0]) - driving_time_often[-1]) > 6:
+            #             driving_time_often.append(int(sort_count_list[loop_index][0]))
+            #
+            #     loop_index += 1
+            #
+            #     if len(driving_time_often) == 2:
+            #         get_value = False
+            # if len(driving_time_often) > 1:
+            #     driving_time_often.sort()   # 时间由早到晚排序
+            #     driving_time_often[0] += 1   # 起始时间加1小时  因为原来统计的时间是一小时之内的 比如8点 代表 8-9点出门 即9点开始上班
+            #     #driving_time_often_str = '-'.join('%s点' % num for num in driving_time_often)
 
             # 判断是否是上班族
-            is_office_worker = self.judge_is_worker(driving_time_often)
+            # is_office_worker = self.judge_is_worker(driving_time_often)
 
             save_msg.loc[row_index] = [user_id, car_id, car_driving_time,
                                         car_driving_day, car_driving_time_everyday,
@@ -1755,18 +1822,19 @@ class Personal_analysis:
                                         usage_rate_day,workdaySum_dring,weekendSum_dring,
                                         usage_rate_workday,usage_rate_weekend,
                                         workdaySum,
-                                        weekendSum, rate, province, city, region,
-                                        start_to_end_list,
-                                        driving_time_often, startaddress,
-                                        startaddress_process,
-                                        count_start_address_,
-                                        sum_start_address_,
-                                        everyday_end_address, everyday_end_address_process,
-                                        count_everyday_end_address_, sum_everyday_end_address_,
-                                       everyday_first_stop_address, everyday_first_stop_address_process,
-                                       everyday_first_stop_times_, everyday_first_stop_times_sum_,
-                                       everyday_stay_long_address, everyday_stay_long_address_process,
-                                       everyday_stay_long_times_, everyday_stay_long_sum_,
+                                        weekendSum, rate,
+                                       province, city, region,
+                                       #  start_to_end_list,
+                                       #  driving_time_often, startaddress,
+                                       #  startaddress_process,
+                                       #  count_start_address_,
+                                       #  sum_start_address_,
+                                       #  everyday_end_address, everyday_end_address_process,
+                                       #  count_everyday_end_address_, sum_everyday_end_address_,
+                                       # everyday_first_stop_address, everyday_first_stop_address_process,
+                                       # everyday_first_stop_times_, everyday_first_stop_times_sum_,
+                                       # everyday_stay_long_address, everyday_stay_long_address_process,
+                                       # everyday_stay_long_times_, everyday_stay_long_sum_,
                                        everyday_stay_long_address_6_21, everyday_stay_long_address_6_21_process,
                                        everyday_stay_long_times_6_21_, everyday_stay_long_sum_6_21_,
                                        everyday_stay_long_mean_stay_time_6_21_,
@@ -1777,14 +1845,25 @@ class Personal_analysis:
                                         first_address, home_address_guesss, home_address_guesss_process,
                                         work_address_guesss,work_address_guesss_process,
                                         home_address_guesss_GPS_pos, work_address_guesss_GPS_pos,
-                                        home_address_gps_lat_lng, work_address_gps_lat_lng,
-                                       home_address_gps_prob, work_address_gps_prob,
-                                        weekendGo, weekendGo_process,
-                                        workdayGo, workdayGo_process,
-                                        having_kindergarten, having_primary_school,
-                                        having_middle_school, is_office_worker,
-                                        consumer_address,
-                                        each_hour_driving_time,
+
+                                       home_address_gps_by_dbscan_lng, home_address_gps_by_dbscan_lat,
+                                       home_address_gps_by_dbscan_prob,
+                                       work_address_gps_by_dbscan_lng, work_address_gps_by_dbscan_lat,
+                                       work_address_gps_by_dbscan_prob,
+
+                                       home_address_gps_by_kde_lng, home_address_gps_by_kde_lat,
+                                       work_address_gps_by_kde_lng, work_address_gps_by_kde_lat,
+                                       diff_home_lng, diff_home_lat, diff_work_lng, diff_work_lat,
+
+                                       home_address_gps_by_dbscan, home_address_gps_by_kde,
+                                       work_address_gps_by_dbscan, work_address_gps_by_kde,
+
+                                        # weekendGo, weekendGo_process,
+                                        # workdayGo, workdayGo_process,
+                                        # having_kindergarten, having_primary_school,
+                                        # having_middle_school, is_office_worker,
+                                        # consumer_address,
+                                        # each_hour_driving_time,
                                        ]
             row_index += 1
             logger.info("写入个人数据：%s....进度%0.2f" % (user_id, row_index/nu_))
